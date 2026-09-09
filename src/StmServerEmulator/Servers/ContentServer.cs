@@ -62,7 +62,8 @@ namespace StmServerEmulator.Servers
                             if (fileName.Contains("_"))
                             {
                                 string[] parts = fileName.Split('_');
-                                if (parts.Length >= 2 && uint.TryParse(parts[1], out uint appId))
+                                uint appId;
+                                if (parts.Length >= 2 && uint.TryParse(parts[1], out appId))
                                 {
                                     depotCache[appId] = manifestFile;
                                     logger.Debug("Cached depot {0}: {1}", appId, manifestFile);

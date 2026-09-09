@@ -37,7 +37,9 @@ namespace StmServerEmulator
         // SERVER STATE & LIFECYCLE
         // =============================================================================
         public static Dictionary<string, Thread> ServerThreads = new Dictionary<string, Thread>();
-        public static HashSet<string> DisabledServers = new HashSet<string>();
+        // HashSet<T> is not available in the .NET Framework 2.0 base libraries.
+        // The value is intentionally unused; only the key set matters.
+        public static Dictionary<string, bool> DisabledServers = new Dictionary<string, bool>();
         public static bool ShutdownRequested = false;
         public static DateTime? StartTime = null;
         public static bool StopServer = false;

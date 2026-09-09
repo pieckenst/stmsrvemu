@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Text;
 using StmServerEmulator.Config;
 using StmServerEmulator.Logging;
 using StmServerEmulator.Networking;
@@ -160,7 +161,7 @@ namespace StmServerEmulator.Servers
                 logger.LogPacket(LogLevel.Debug, "RECV", requestData, "Directory request");
                 
                 // Process directory request
-                byte[] responseData = ProcessDirectoryRequest(requestData, bytesRead, clientIp, clientId);
+                byte[] responseData = ProcessDirectoryRequest(requestData, clientIp, clientId);
                 
                 // Send response
                 if (responseData != null)
@@ -326,7 +327,7 @@ namespace StmServerEmulator.Servers
         /// <summary>
         /// Process directory request
         /// </summary>
-        private byte[] ProcessDirectoryRequest(byte[] requestData, int bytesRead, string clientIp, string clientId)
+        private byte[] ProcessDirectoryRequest(byte[] requestData, string clientIp, string clientId)
         {
             logger.LogFunctionEntry("DirectoryServer.ProcessDirectoryRequest", requestData.Length);
             

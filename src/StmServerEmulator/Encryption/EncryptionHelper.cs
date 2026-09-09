@@ -1,8 +1,6 @@
-using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System;
 
 namespace StmServerEmulator.Encryption
 {
@@ -19,10 +17,11 @@ namespace StmServerEmulator.Encryption
         };
 
         /// <summary>
-        /// Encrypt data using AES with PKCS7 padding
+        /// Encrypt data using AES with provider PKCS7 padding.
         /// </summary>
         public static byte[] AesEncrypt(byte[] key, byte[] iv, byte[] message)
         {
+            ValidateAesArguments(key, iv, message);
             using (RijndaelManaged aes = new RijndaelManaged())
             {
                 aes.Key = key;
@@ -44,16 +43,23 @@ namespace StmServerEmulator.Encryption
         }
 
         /// <summary>
-        /// Decrypt data using AES with PKCS7 padding
+        /// Decrypt one or more AES blocks without stripping Steam protocol padding.
         /// </summary>
         public static byte[] AesDecrypt(byte[] key, byte[] iv, byte[] message)
         {
+            ValidateAesArguments(key, iv, message);
+            if (message.Length % 16 != 0)
+            {
+                throw new ArgumentException("AES ciphertext must contain complete blocks", "message");
+            }
             using (RijndaelManaged aes = new RijndaelManaged())
             {
                 aes.Key = key;
                 aes.IV = iv;
                 aes.Mode = CipherMode.CBC;
-                aes.Padding = PaddingMode.PKCS7;
+                // Steam2 prefixes the unpadded length and applies its own PKCS#7
+                // bytes.  Do not let CryptoStream remove that protocol padding.
+                aes.Padding = PaddingMode.None;
 
                 ICryptoTransform decryptor = aes.CreateDecryptor();
                 using (MemoryStream ms = new MemoryStream(message))
@@ -80,6 +86,7 @@ namespace StmServerEmulator.Encryption
         /// </summary>
         public static byte[] EncryptWithPad(byte[] key, byte[] iv, byte[] plaintext)
         {
+            ValidateAesArguments(key, iv, plaintext);
             int padSize = 16 - (plaintext.Length % 16);
             byte[] paddedText = new byte[plaintext.Length + padSize];
             Array.Copy(plaintext, paddedText, plaintext.Length);
@@ -90,7 +97,7 @@ namespace StmServerEmulator.Encryption
                 paddedText[i] = (byte)padSize;
             }
 
-            return AesEncrypt(key, iv, paddedText);
+            return AesEncryptWithoutPadding(key, iv, paddedText);
         }
 
         /// <summary>
@@ -131,6 +138,10 @@ namespace StmServerEmulator.Encryption
         /// </summary>
         public static byte[] DecryptMessage(byte[] message, byte[] key)
         {
+            if (message == null || message.Length < 20)
+            {
+                throw new ArgumentException("Steam encrypted message is shorter than its header", "message");
+            }
             using (MemoryStream ms = new MemoryStream(message))
             {
                 BinaryReader reader = new BinaryReader(ms);
@@ -139,6 +150,11 @@ namespace StmServerEmulator.Encryption
                 ushort ptextSize = ReadBigEndianUInt16(reader);
                 ushort ctextSize = ReadBigEndianUInt16(reader);
                 byte[] ctext = reader.ReadBytes(ctextSize);
+
+                if (ctext.Length != ctextSize || ptextSize > ctextSize)
+                {
+                    throw new InvalidDataException("Steam encrypted message has inconsistent length fields");
+                }
 
                 byte[] decrypted = AesDecrypt(key, iv, ctext);
                 
@@ -155,6 +171,10 @@ namespace StmServerEmulator.Encryption
         /// </summary>
         public static byte[] BetaDecryptMessageV1(byte[] message, byte[] key)
         {
+            if (message == null || message.Length < 20)
+            {
+                throw new ArgumentException("Beta encrypted message is shorter than its header", "message");
+            }
             using (MemoryStream ms = new MemoryStream(message))
             {
                 BinaryReader reader = new BinaryReader(ms);
@@ -322,6 +342,10 @@ namespace StmServerEmulator.Encryption
         /// </summary>
         public static bool ValidateMac(byte[] message, byte[] key)
         {
+            if (message == null || key == null || message.Length < 20)
+            {
+                return false;
+            }
             byte[] data = new byte[message.Length - 20];
             byte[] receivedMac = new byte[20];
             
@@ -356,6 +380,41 @@ namespace StmServerEmulator.Encryption
                 Array.Reverse(bytes);
             }
             return BitConverter.ToUInt16(bytes, 0);
+        }
+
+        private static byte[] AesEncryptWithoutPadding(byte[] key, byte[] iv, byte[] message)
+        {
+            if (message.Length % 16 != 0)
+            {
+                throw new ArgumentException("Steam AES plaintext must be padded to a whole block", "message");
+            }
+            using (RijndaelManaged aes = new RijndaelManaged())
+            {
+                aes.Key = key;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.None;
+                using (ICryptoTransform encryptor = aes.CreateEncryptor())
+                {
+                    return encryptor.TransformFinalBlock(message, 0, message.Length);
+                }
+            }
+        }
+
+        private static void ValidateAesArguments(byte[] key, byte[] iv, byte[] message)
+        {
+            if (key == null || (key.Length != 16 && key.Length != 24 && key.Length != 32))
+            {
+                throw new ArgumentException("AES key must be 16, 24, or 32 bytes", "key");
+            }
+            if (iv == null || iv.Length != 16)
+            {
+                throw new ArgumentException("AES IV must be 16 bytes", "iv");
+            }
+            if (message == null)
+            {
+                throw new ArgumentNullException("message");
+            }
         }
 
         /// <summary>

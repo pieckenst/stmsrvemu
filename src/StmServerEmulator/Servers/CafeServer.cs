@@ -1,48 +1,27 @@
-using System;
-using System.Net;
-using System.Net.Sockets;
-using StmServerEmulator.Config;
-using StmServerEmulator.Logging;
+using System.Collections.Generic;
 
 namespace StmServerEmulator.Servers
 {
     /// <summary>
-    /// Steam Cafe Server
-    /// Handles cybercafe authentication and management
+    /// The historical Cafe server is the VTT protocol on a separate endpoint.
     /// </summary>
-    public class CafeServer : ServerBase
+    public sealed class CafeServer : VTTServer
     {
-        public CafeServer(string port, Dictionary<string, string> config) 
-            : base(int.Parse(port), config, "CafeServer")
+        public CafeServer(string port, Dictionary<string, string> config)
+            : base(ParseCafePort(port), config, "CafeServer")
         {
+            logger.LogFunctionEntry("CafeServer.ctor", port);
+            logger.LogFunctionExit("CafeServer.ctor");
         }
 
-        protected override void HandleClient(object clientObj)
+        private static int ParseCafePort(string value)
         {
-            TcpClient client = (TcpClient)clientObj;
-            logger.Info("CafeServer request from {0}", 
-                ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString());
-            
-            try
+            int port;
+            if (!System.Int32.TryParse(value, out port) || port < 1 || port > 65535)
             {
-                NetworkStream stream = client.GetStream();
-                byte[] response = BuildCafeResponse();
-                stream.Write(response, 0, response.Length);
-                stream.Flush();
+                throw new System.ArgumentException("Invalid cafe server port", "value");
             }
-            catch (Exception ex)
-            {
-                logger.Error("Error in CafeServer: {0}", ex.Message);
-            }
-            finally
-            {
-                CloseClient(client);
-            }
-        }
-
-        private byte[] BuildCafeResponse()
-        {
-            return new byte[] { 0x00, 0x00, 0x00, 0x01 }; // Success
+            return port;
         }
     }
 }

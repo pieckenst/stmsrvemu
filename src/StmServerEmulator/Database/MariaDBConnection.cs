@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.OleDb;
 using StmServerEmulator.Config;
 using StmServerEmulator.Logging;
@@ -7,69 +9,56 @@ using StmServerEmulator.Logging;
 namespace StmServerEmulator.Database
 {
     /// <summary>
-    /// MariaDB connection handler
-    /// Handles MariaDB-specific database operations using OLE DB
+    /// MariaDB connection wrapper.  It uses Connector/NET when installed and the
+    /// system ODBC provider otherwise, keeping the emulator usable on .NET 2.0.
     /// </summary>
-    public class MariaDBConnection
+    public sealed class MariaDBConnection : IDisposable
     {
-        private string connectionString;
-        private OleDbConnection connection;
-        private Logger logger;
+        private readonly string connectionString;
+        private readonly DbProviderFactory providerFactory;
+        private readonly string providerName;
+        private readonly Logger logger;
+        private DbConnection connection;
         private bool isConnected;
 
-        /// <summary>
-        /// Constructor for MariaDBConnection
-        /// </summary>
         public MariaDBConnection()
         {
-            var config = ConfigManager.GetConfig();
-            this.connectionString = BuildConnectionString(config);
-            this.logger = Logger.GetLogger("MariaDBConnection");
-            this.isConnected = false;
+            Dictionary<string, string> config = ConfigManager.GetConfig();
+            logger = Logger.GetLogger("MariaDBConnection");
+            providerFactory = SelectProvider(out providerName);
+            connectionString = BuildConnectionString(config, providerName);
+            logger.Info("Database provider selected: {0}; host={1}; database={2}", providerName, GetValue(config, "database_host"), GetValue(config, "database"));
         }
 
-        /// <summary>
-        /// Build connection string from configuration
-        /// </summary>
-        private string BuildConnectionString(Dictionary<string, string> config)
-        {
-            string host = config["database_host"];
-            string port = config["database_port"];
-            string database = config["database"];
-            string username = config["database_username"];
-            string password = config["database_password"];
+        public string ConnectionString { get { return connectionString; } }
+        public string ProviderName { get { return providerName; } }
+        public bool IsConnected { get { return isConnected && connection != null && connection.State == ConnectionState.Open; } }
 
-            // For .NET Framework 2.0, we'll use OleDb with MySQL provider
-            // In production, you would use MySQL Connector/Net
-            return string.Format("Provider=MySQLProv;Data Source={0};Port={1};Database={2};User Id={3};Password={4};",
-                host, port, database, username, password);
-        }
-
-        /// <summary>
-        /// Open database connection
-        /// </summary>
         public void Open()
         {
-            logger.LogFunctionEntry("MariaDBConnection.Open");
-            
+            logger.LogFunctionEntry("MariaDBConnection.Open", providerName);
             try
             {
                 if (connection == null)
                 {
-                    connection = new OleDbConnection(connectionString);
+                    connection = providerFactory.CreateConnection();
+                    if (connection == null)
+                    {
+                        throw new InvalidOperationException("The selected database provider did not create a connection");
+                    }
+                    connection.ConnectionString = connectionString;
                 }
-
                 if (connection.State != ConnectionState.Open)
                 {
                     connection.Open();
                     isConnected = true;
-                    logger.Info("Database connection opened successfully");
+                    logger.Info("MariaDB connection opened using {0}", providerName);
                 }
             }
             catch (Exception ex)
             {
-                logger.LogException("MariaDBConnection.Open", ex);
                 isConnected = false;
+                logger.LogException("MariaDBConnection.Open", ex, "provider=" + providerName);
                 throw;
             }
             finally
@@ -78,21 +67,17 @@ namespace StmServerEmulator.Database
             }
         }
 
-        /// <summary>
-        /// Close database connection
-        /// </summary>
         public void Close()
         {
             logger.LogFunctionEntry("MariaDBConnection.Close");
-            
             try
             {
-                if (connection != null && connection.State == ConnectionState.Open)
+                if (connection != null && connection.State != ConnectionState.Closed)
                 {
                     connection.Close();
-                    isConnected = false;
-                    logger.Info("Database connection closed");
+                    logger.Info("MariaDB connection closed");
                 }
+                isConnected = false;
             }
             catch (Exception ex)
             {
@@ -104,256 +89,165 @@ namespace StmServerEmulator.Database
             }
         }
 
-        /// <summary>
-        /// Execute a SQL query
-        /// </summary>
-        public DataTable ExecuteQuery(string query)
-        {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteQuery", query);
-            
-            DataTable result = new DataTable();
-            
-            try
-            {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
-                {
-                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
-                    {
-                        adapter.Fill(result);
-                    }
-                }
-                
-                logger.Debug("Query executed successfully, returned {0} rows", result.Rows.Count);
-            }
-            catch (Exception ex)
-            {
-                logger.LogException("MariaDBConnection.ExecuteQuery", ex, "Query: " + query);
-                throw;
-            }
-            finally
-            {
-                logger.LogFunctionExit("MariaDBConnection.ExecuteQuery", result.Rows.Count);
-            }
-            
-            return result;
-        }
-
-        /// <summary>
-        /// Execute a SQL query with parameters
-        /// </summary>
+        public DataTable ExecuteQuery(string query) { return ExecuteQuery(query, null); }
         public DataTable ExecuteQuery(string query, OleDbParameter[] parameters)
         {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteQuery", query, parameters.Length);
-            
+            logger.LogFunctionEntry("MariaDBConnection.ExecuteQuery", DescribeQuery(query), ParameterCount(parameters));
             DataTable result = new DataTable();
-            
             try
             {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
+                using (DbCommand command = CreateCommand(query, parameters))
+                using (DbDataAdapter adapter = providerFactory.CreateDataAdapter())
                 {
-                    if (parameters != null)
+                    if (adapter == null)
                     {
-                        command.Parameters.AddRange(parameters);
+                        throw new InvalidOperationException("The selected database provider does not expose a data adapter");
                     }
-                    
-                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
-                    {
-                        adapter.Fill(result);
-                    }
+                    adapter.SelectCommand = command;
+                    adapter.Fill(result);
                 }
-                
-                logger.Debug("Parameterized query executed successfully, returned {0} rows", result.Rows.Count);
+                logger.Debug("Database query returned {0} row(s)", result.Rows.Count);
+                return result;
             }
             catch (Exception ex)
             {
-                logger.LogException("MariaDBConnection.ExecuteQuery", ex, "Query: " + query);
+                logger.LogException("MariaDBConnection.ExecuteQuery", ex, DescribeQuery(query));
                 throw;
             }
             finally
             {
                 logger.LogFunctionExit("MariaDBConnection.ExecuteQuery", result.Rows.Count);
             }
-            
-            return result;
         }
 
-        /// <summary>
-        /// Execute a non-query SQL command
-        /// </summary>
-        public int ExecuteNonQuery(string query)
-        {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteNonQuery", query);
-            
-            int rowsAffected = 0;
-            
-            try
-            {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
-                {
-                    rowsAffected = command.ExecuteNonQuery();
-                }
-                
-                logger.Debug("Non-query executed successfully, affected {0} rows", rowsAffected);
-            }
-            catch (Exception ex)
-            {
-                logger.LogException("MariaDBConnection.ExecuteNonQuery", ex, "Query: " + query);
-                throw;
-            }
-            finally
-            {
-                logger.LogFunctionExit("MariaDBConnection.ExecuteNonQuery", rowsAffected);
-            }
-            
-            return rowsAffected;
-        }
-
-        /// <summary>
-        /// Execute a non-query SQL command with parameters
-        /// </summary>
+        public int ExecuteNonQuery(string query) { return ExecuteNonQuery(query, null); }
         public int ExecuteNonQuery(string query, OleDbParameter[] parameters)
         {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteNonQuery", query, parameters.Length);
-            
-            int rowsAffected = 0;
-            
+            logger.LogFunctionEntry("MariaDBConnection.ExecuteNonQuery", DescribeQuery(query), ParameterCount(parameters));
+            int affected = 0;
             try
             {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
+                using (DbCommand command = CreateCommand(query, parameters))
                 {
-                    if (parameters != null)
-                    {
-                        command.Parameters.AddRange(parameters);
-                    }
-                    
-                    rowsAffected = command.ExecuteNonQuery();
+                    affected = command.ExecuteNonQuery();
                 }
-                
-                logger.Debug("Parameterized non-query executed successfully, affected {0} rows", rowsAffected);
+                logger.Debug("Database non-query affected {0} row(s)", affected);
+                return affected;
             }
             catch (Exception ex)
             {
-                logger.LogException("MariaDBConnection.ExecuteNonQuery", ex, "Query: " + query);
+                logger.LogException("MariaDBConnection.ExecuteNonQuery", ex, DescribeQuery(query));
                 throw;
             }
             finally
             {
-                logger.LogFunctionExit("MariaDBConnection.ExecuteNonQuery", rowsAffected);
+                logger.LogFunctionExit("MariaDBConnection.ExecuteNonQuery", affected);
             }
-            
-            return rowsAffected;
         }
 
-        /// <summary>
-        /// Execute a scalar query (returns single value)
-        /// </summary>
-        public object ExecuteScalar(string query)
-        {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteScalar", query);
-            
-            object result = null;
-            
-            try
-            {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
-                {
-                    result = command.ExecuteScalar();
-                }
-                
-                logger.Debug("Scalar query executed successfully");
-            }
-            catch (Exception ex)
-            {
-                logger.LogException("MariaDBConnection.ExecuteScalar", ex, "Query: " + query);
-                throw;
-            }
-            finally
-            {
-                logger.LogFunctionExit("MariaDBConnection.ExecuteScalar", result);
-            }
-            
-            return result;
-        }
-
-        /// <summary>
-        /// Execute a scalar query with parameters
-        /// </summary>
+        public object ExecuteScalar(string query) { return ExecuteScalar(query, null); }
         public object ExecuteScalar(string query, OleDbParameter[] parameters)
         {
-            logger.LogFunctionEntry("MariaDBConnection.ExecuteScalar", query, parameters.Length);
-            
+            logger.LogFunctionEntry("MariaDBConnection.ExecuteScalar", DescribeQuery(query), ParameterCount(parameters));
             object result = null;
-            
             try
             {
-                EnsureConnection();
-                
-                using (OleDbCommand command = new OleDbCommand(query, connection))
+                using (DbCommand command = CreateCommand(query, parameters))
                 {
-                    if (parameters != null)
-                    {
-                        command.Parameters.AddRange(parameters);
-                    }
-                    
                     result = command.ExecuteScalar();
                 }
-                
-                logger.Debug("Parameterized scalar query executed successfully");
+                logger.Debug("Database scalar result type: {0}", result == null ? "<null>" : result.GetType().FullName);
+                return result;
             }
             catch (Exception ex)
             {
-                logger.LogException("MariaDBConnection.ExecuteScalar", ex, "Query: " + query);
+                logger.LogException("MariaDBConnection.ExecuteScalar", ex, DescribeQuery(query));
                 throw;
             }
             finally
             {
-                logger.LogFunctionExit("MariaDBConnection.ExecuteScalar", result);
+                logger.LogFunctionExit("MariaDBConnection.ExecuteScalar", result == null ? "<null>" : "value");
             }
-            
-            return result;
         }
 
-        /// <summary>
-        /// Test database connection
-        /// </summary>
         public bool TestConnection()
         {
             logger.LogFunctionEntry("MariaDBConnection.TestConnection");
-            
             try
             {
-                EnsureConnection();
-                
-                // Execute a simple test query
                 object result = ExecuteScalar("SELECT 1");
-                
-                bool success = result != null && Convert.ToInt32(result) == 1;
-                logger.Info("Database connection test: {0}", success ? "Success" : "Failed");
-                
-                logger.LogFunctionExit("MariaDBConnection.TestConnection", success);
-                return success;
+                bool connected = result != null && Convert.ToInt32(result) == 1;
+                logger.Info("MariaDB connectivity test: {0}", connected ? "success" : "failed");
+                return connected;
             }
             catch (Exception ex)
             {
                 logger.LogException("MariaDBConnection.TestConnection", ex);
-                logger.LogFunctionExit("MariaDBConnection.TestConnection", false);
                 return false;
+            }
+            finally
+            {
+                logger.LogFunctionExit("MariaDBConnection.TestConnection", IsConnected);
             }
         }
 
-        /// <summary>
-        /// Ensure connection is open
-        /// </summary>
+        public void Dispose()
+        {
+            logger.LogFunctionEntry("MariaDBConnection.Dispose");
+            try
+            {
+                Close();
+                if (connection != null)
+                {
+                    connection.Dispose();
+                    connection = null;
+                }
+            }
+            finally
+            {
+                logger.LogFunctionExit("MariaDBConnection.Dispose");
+            }
+        }
+
+        private DbCommand CreateCommand(string query, OleDbParameter[] sourceParameters)
+        {
+            if (String.IsNullOrEmpty(query))
+            {
+                throw new ArgumentException("A SQL statement is required", "query");
+            }
+            EnsureConnection();
+            DbCommand command = connection.CreateCommand();
+            command.CommandText = query;
+            command.CommandType = CommandType.Text;
+            AddParameters(command, sourceParameters);
+            return command;
+        }
+
+        private void AddParameters(DbCommand command, OleDbParameter[] sourceParameters)
+        {
+            if (sourceParameters == null)
+            {
+                return;
+            }
+            for (int i = 0; i < sourceParameters.Length; i++)
+            {
+                OleDbParameter source = sourceParameters[i];
+                DbParameter parameter = providerFactory.CreateParameter();
+                if (parameter == null)
+                {
+                    throw new InvalidOperationException("The selected database provider did not create a parameter");
+                }
+                parameter.ParameterName = String.IsNullOrEmpty(source.ParameterName) ? "p" + i : source.ParameterName;
+                parameter.Value = source.Value ?? DBNull.Value;
+                parameter.Direction = source.Direction;
+                if (source.Size > 0)
+                {
+                    parameter.Size = source.Size;
+                }
+                command.Parameters.Add(parameter);
+            }
+        }
+
         private void EnsureConnection()
         {
             if (connection == null || connection.State != ConnectionState.Open)
@@ -362,34 +256,42 @@ namespace StmServerEmulator.Database
             }
         }
 
-        /// <summary>
-        /// Get connection string
-        /// </summary>
-        public string ConnectionString
+        private static DbProviderFactory SelectProvider(out string name)
         {
-            get { return connectionString; }
-        }
-
-        /// <summary>
-        /// Check if connection is open
-        /// </summary>
-        public bool IsConnected
-        {
-            get { return isConnected && connection != null && connection.State == ConnectionState.Open; }
-        }
-
-        /// <summary>
-        /// Dispose of connection
-        /// </summary>
-        public void Dispose()
-        {
-            Close();
-            
-            if (connection != null)
+            try
             {
-                connection.Dispose();
-                connection = null;
+                DbProviderFactory factory = DbProviderFactories.GetFactory("MySql.Data.MySqlClient");
+                name = "MySql.Data.MySqlClient";
+                return factory;
+            }
+            catch (Exception)
+            {
+                name = "System.Data.Odbc";
+                return DbProviderFactories.GetFactory(name);
             }
         }
+
+        private static string BuildConnectionString(Dictionary<string, string> config, string provider)
+        {
+            string host = GetValue(config, "database_host");
+            string port = GetValue(config, "database_port");
+            string database = GetValue(config, "database");
+            string username = GetValue(config, "database_username");
+            string password = GetValue(config, "database_password");
+            if (provider == "MySql.Data.MySqlClient")
+            {
+                return String.Format("Server={0};Port={1};Database={2};Uid={3};Pwd={4};Pooling=true;Connection Timeout=15;", host, port, database, username, password);
+            }
+            return String.Format("Driver={{MariaDB ODBC 3.1 Driver}};Server={0};Port={1};Database={2};User={3};Password={4};Option=3;", host, port, database, username, password);
+        }
+
+        private static string GetValue(Dictionary<string, string> config, string key)
+        {
+            string value;
+            return config != null && config.TryGetValue(key, out value) ? value : String.Empty;
+        }
+
+        private static int ParameterCount(OleDbParameter[] parameters) { return parameters == null ? 0 : parameters.Length; }
+        private static string DescribeQuery(string query) { return query == null ? "<null SQL>" : query.Replace('\r', ' ').Replace('\n', ' ').Trim(); }
     }
 }

@@ -52,6 +52,7 @@
     <Compile Include="Networking\NetworkHelper.cs" />
     <Compile Include="Networking\PacketHelper.cs" />
     <Compile Include="Servers\ServerBase.cs" />
+    <Compile Include="Servers\UdpServerBase.cs" />
     <Compile Include="Servers\AuthServer.cs" />
     <Compile Include="Servers\ContentServer.cs" />
     <Compile Include="Servers\DirectoryServer.cs" />

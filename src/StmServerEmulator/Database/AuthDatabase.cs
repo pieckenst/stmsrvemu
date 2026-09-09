@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.OleDb;
 using System.Text;
 using StmServerEmulator.Config;
 using StmServerEmulator.Logging;
@@ -656,9 +657,17 @@ namespace StmServerEmulator.Database
             
             try
             {
-                // This would update subscription status flags in the user registry
-                // For now, just log the operation
-                logger.Debug("Subscription status flags updated for user {0}", username);
+                uint accountId = GetAccountId(username);
+                if (accountId == 0)
+                {
+                    throw new InvalidOperationException("Cannot update subscriptions for an unknown account");
+                }
+                OleDbParameter[] parameters = new OleDbParameter[]
+                {
+                    new OleDbParameter("account_id", accountId)
+                };
+                int rows = connection.ExecuteNonQuery("UPDATE subscriptions SET status = 'active' WHERE account_id = ? AND (status IS NULL OR status = 'pending')", parameters);
+                logger.Debug("Subscription status flags updated for user {0}; {1} record(s) transitioned", username, rows);
             }
             catch (Exception ex)
             {
