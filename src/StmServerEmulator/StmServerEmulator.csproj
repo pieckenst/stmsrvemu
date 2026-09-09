@@ -1,0 +1,78 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>StmServerEmulator</RootNamespace>
+    <AssemblyName>StmServerEmulator</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Config\ConfigManager.cs" />
+    <Compile Include="Config\ConfigDefaults.cs" />
+    <Compile Include="Logging\Logger.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
+    <Compile Include="Logging\LogFormatter.cs" />
+    <Compile Include="GlobalState.cs" />
+    <Compile Include="Encryption\RSAKeyManager.cs" />
+    <Compile Include="Encryption\EncryptionHelper.cs" />
+    <Compile Include="Utilities\DirectoryHelper.cs" />
+    <Compile Include="Utilities\IPHelper.cs" />
+    <Compile Include="Utilities\StringHelper.cs" />
+    <Compile Include="Networking\NetworkHelper.cs" />
+    <Compile Include="Networking\PacketHelper.cs" />
+    <Compile Include="Servers\ServerBase.cs" />
+    <Compile Include="Servers\AuthServer.cs" />
+    <Compile Include="Servers\ContentServer.cs" />
+    <Compile Include="Servers\DirectoryServer.cs" />
+    <Compile Include="Servers\ConfigServer.cs" />
+    <Compile Include="Servers\ContentListServer.cs" />
+    <Compile Include="Servers\ClientUpdateServer.cs" />
+    <Compile Include="Servers\ValidationServer.cs" />
+    <Compile Include="Servers\MasterServer.cs" />
+    <Compile Include="Servers\HarvestServer.cs" />
+    <Compile Include="Servers\VTTServer.cs" />
+    <Compile Include="Servers\CafeServer.cs" />
+    <Compile Include="Servers\AdminServer.cs" />
+    <Compile Include="Servers\CSERServer.cs" />
+    <Compile Include="Servers\VAC1Server.cs" />
+    <Compile Include="Servers\TrackerServer.cs" />
+    <Compile Include="Servers\BetaAuthServer.cs" />
+    <Compile Include="Steam3\CMServerTCP.cs" />
+    <Compile Include="Steam3\CMServerUDP.cs" />
+    <Compile Include="Database\DatabaseManager.cs" />
+    <Compile Include="Database\MariaDBConnection.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>

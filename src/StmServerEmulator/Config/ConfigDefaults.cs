@@ -1,0 +1,252 @@
+using System;
+using System.Collections.Generic;
+
+namespace StmServerEmulator.Config
+{
+    /// <summary>
+    /// Default configuration values for the Steam Server Emulator
+    /// </summary>
+    public static class ConfigDefaults
+    {
+        /// <summary>
+        /// Get all default configuration values
+        /// </summary>
+        public static Dictionary<string, string> GetDefaults()
+        {
+            return new Dictionary<string, string>
+            {
+                // IP Binding and other Network Related Configurations
+                { "auto_public_ip", "true" },
+                { "auto_server_ip", "true" },
+                { "public_ip", "0.0.0.0" },
+                { "server_ip", "0.0.0.0" },
+                { "server_sm", "255.255.255.0" },
+
+                // Log Configurations
+                { "log_level", "INFO" },
+                { "log_to_file", "true" },
+                { "logging_enabled", "true" },
+                { "enable_test_logging", "false" },
+
+                // ImpSocket Packet Logging Per Server
+                { "disable_impsocket_logging_cm_servers", "true" },
+                { "disable_impsocket_logging_content_server", "false" },
+                { "disable_impsocket_logging_auth_server", "false" },
+                { "disable_impsocket_logging_admin_server", "false" },
+                { "disable_impsocket_logging_other_servers", "false" },
+
+                // File Path Configurations
+                { "configsdir", "files/configs/" },
+                { "betastoragedir", "files/betastorages/" },
+                { "storagedir", "files/storages/" },
+                { "v2storagedir", "files/v2storages/" },
+                { "v3storagedir2", "files/v3storages2/" },
+                { "v4storagedir", "files/v4storages/" },
+                { "betamanifestdir", "files/betamanifests/" },
+                { "manifestdir", "files/manifests/" },
+                { "v2manifestdir", "files/v2manifests/" },
+                { "v3manifestdir2", "files/v3manifests2/" },
+                { "v4manifestdir", "files/v4manifests/" },
+                { "steam2sdkdir", "files/steam2_sdk_depots/" },
+                { "sdktoolsdir", "files/steamworks_archives/" },
+                { "packagedir", "files/packages/" },
+                { "blobdir", "files/blobs/" },
+                { "vacmoduledir", "files/vacmodules/" },
+
+                // Cafe Configurations
+                { "cafeuser", "noaccountconfigured" },
+                { "cafepass", "bar" },
+                { "cafemacs", "00-00-00-00-00-00;" },
+                { "cafetime", "60" },
+                { "cafe_use_mac_auth", "false" },
+
+                // SDK/SteamWorks ContentServer Configurations
+                { "sdk_ip", "127.0.0.1" },
+                { "sdk_port", "27030" },
+                { "use_sdk", "false" },
+                { "use_sdk_as_cs", "false" },
+
+                // White/Black List Configurations
+                { "enable_whitelist", "false" },
+                { "enable_blacklist", "true" },
+                { "ip_blacklist", "ip_blacklist.txt" },
+                { "ip_whitelist", "ip_whitelist.txt" },
+                { "enable_firehol", "true" },
+
+                // Email/SMTP Configurations
+                { "smtp_enabled", "false" },
+                { "smtp_serverip", "" },
+                { "smtp_serverport", "" },
+                { "smtp_username", "" },
+                { "smtp_security", "tls" },
+                { "smtp_password", "" },
+                { "network_logo", "http://google.com/logo.jpg" },
+                { "network_name", "STMServer" },
+                { "email_location_support", "false" },
+                { "force_email_verification", "false" },
+                { "support_email", "support@stmserver.com" },
+
+                // Database Configurations
+                { "use_builtin_mysql", "true" },
+                { "database_username", "stmserver" },
+                { "database_password", "" },
+                { "database", "stmserver" },
+                { "database_host", "127.0.0.1" },
+                { "database_port", "3306" },
+
+                // CMS Database Configurations
+                { "use_cms", "false" },
+                { "cms_usesamedb", "" },
+                { "cms_dbname", "" },
+                { "cms_dbaddress", "" },
+                { "cms_dbport", "" },
+                { "cms_dbusername", "" },
+                { "cms_dbpassword", "" },
+
+                // Server Port Configurations
+                { "ftp_server_port", "21" },
+                { "tracker_server_port", "1200" },
+                { "masterhl1_server_port", "27010" },
+                { "masterhl2_server_port", "27010" },
+                { "masterrdkf_server_port", "27010" },
+                { "vac_server_port", "27012" },
+                { "cser_server_port", "27013" },
+                { "cm_unencrypted_server_port", "27014" },
+                { "cm_encrypted_server_port", "27017" },
+                { "content_server_port", "27030" },
+
+                // P2P Audio Relay Configurations
+                { "relay_enabled", "true" },
+                { "relay_ip", "127.0.0.1" },
+                { "relay_port", "27036" },
+                { "clupd_server_port", "27031" },
+                { "harvest_server_port", "27032" },
+                { "config_server_port", "27035" },
+                { "contentdir_server_port", "27037" },
+                { "dir_server_port", "27038" },
+                { "auth_server_port", "27039" },
+                { "validation_port", "27040" },
+                { "vtt_server_port", "27046" },
+                { "cafe_server_port", "27047" },
+                { "admin_server_port", "32677" },
+                { "ping_server_port", "27057" },
+
+                // Content Server and CM Related Configurations
+                { "cellid", "1" },
+                { "override_ip_country_region", "US" },
+                { "enable_custom_banner", "false" },
+                { "custom_banner_url", "" },
+                { "cache_sdk_depot", "true" },
+
+                // RSA Key Configurations
+                { "main_key_n", "0x86724794f8a0fcb0c129b979e7af2e1e309303a7042503d835708873b1df8a9e307c228b9c0862f8f5dbe6f81579233db8a4fe6ba14551679ad72c01973b5ee4ecf8ca2c21524b125bb06cfa0047e2d202c2a70b7f71ad7d1c3665e557a7387bbc43fe52244e58d91a14c660a84b6ae6fdc857b3f595376a8e484cb6b90cc992f5c57cccb1a1197ee90814186b046968f872b84297dad46ed4119ae0f402803108ad95777615c827de8372487a22902cb288bcbad7bc4a842e03a33bd26e052386cbc088c3932bdd1ec4fee1f734fe5eeec55d51c91e1d9e5eae46cf7aac15b2654af8e6c9443b41e92568cce79c08ab6fa61601e4eed791f0436fdc296bb373" },
+                { "main_key_e", "0x07e89acc87188755b1027452770a4e01c69f3c733c7aa5df8aac44430a768faef3cb11174569e7b44ab2951da6e90212b0822d1563d6e6abbdd06c0017f46efe684adeb74d4113798cec42a54b4f85d01e47af79259d4670c56c9c950527f443838b876e3e5ef62ae36aa241ebc83376ffde9bbf4aae6cabea407cfbb08848179e466bcb046b0a857d821c5888fcd95b2aae1b92aa64f3a6037295144aa45d0dbebce075023523bce4243ae194258026fc879656560c109ea9547a002db38b89caac90d75758e74c5616ed9816f3ed130ff6926a1597380b6fc98b5eeefc5104502d9bee9da296ca26b32d9094452ab1eb9cf970acabeecde6b1ffae57b56401" },
+                { "net_key_n", "0xbf973e24beb372c12bea4494450afaee290987fedae8580057e4f15b93b46185b8daf2d952e24d6f9a23805819578693a846e0b8fcc43c23e1f2bf49e843aff4b8e9af6c5e2e7b9df44e29e3c1c93f166e25e42b8f9109be8ad03438845a3c1925504ecc090aabd49a0fc6783746ff4e9e090aa96f1c8009baf9162b66716059" },
+                { "net_key_d", "0x4ee3ec697bb34d5e999cb2d3a3f5766210e5ce961de7334b6f7c6361f18682825b2cfa95b8b7894c124ada7ea105ec1eaeb3c5f1d17dfaa55d099a0f5fa366913b171af767fe67fb89f5393efdb69634f74cb41cb7b3501025c4e8fef1ff434307c7200f197b74044e93dbcf50dcc407cbf347b4b817383471cd1de7b5964a9d" },
+
+                // Apache/HTTP Configurations
+                { "use_webserver", "true" },
+                { "store_url_new", "/storefront" },
+                { "support_url_new", "/support" },
+                { "http_ip", "" },
+                { "http_domainname", "" },
+                { "community_ip", "" },
+                { "community_domainname", "" },
+                { "community_port", "443" },
+                { "apache_root", "files/webserver/apache24/" },
+                { "web_root", "files/webserver/webroot/" },
+                { "community_root", "files/webserver/community/" },
+                { "http_maxconnections", "20" },
+                { "http_signature", "STMServer Network" },
+                { "http_webmaster_email", "webmaster@stmserver.com" },
+
+                // Blob Configurations
+                { "steam_date", "2004^10^01" },
+                { "steam_time", "00_00_01" },
+                { "subtract_time", "0" },
+                { "auto_blobs", "false" },
+                { "disable_steam3_purchasing", "true" },
+                { "alter_preload_unlocks", "true" },
+
+                // (Create Account) Suggested Name Configurations
+                { "amount_of_suggested_names", "10" },
+                { "use_builtin_suggested_name_modifiers", "true" },
+
+                // Guestpass/Gift System
+                { "disable_guestpass_system", "true" },
+
+                // Misc Configurations
+                { "emu_auto_update", "true" },
+                { "enable_steam3_servers", "true" },
+                { "allow_harvest_upload", "true" },
+                { "storage_check", "false" },
+                { "universe", "1" },
+                { "hldsupkg", "" },
+                { "ticket_expiration_time_length", "0d0h45m0s" },
+                { "run_all_servers", "true" },
+                { "enable_ftp", "true" },
+                { "force_sdk_upload_review", "true" },
+                { "auto_verify_steam3_email", "true" },
+                { "auto_friend_later_clients", "true" },
+                { "cloud_root", "cloud" },
+
+                { "global_tracker", "false" },
+                { "global_tracker_ip", "127.0.0.1" },
+                { "global_tracker_port", "1300" },
+                { "local_network_name", "" },
+                { "force_beta1_specialkey", "false" },
+                { "use_emu_console", "false" },
+                { "use_ben_console", "false" },
+                { "tinserver_ip", "127.0.0.1" },
+
+                // Split-Server Related Configurations
+                { "harvest_ip", "0.0.0.0" },
+                { "masterdir_ipport", "127.0.0.1:27038" },
+                { "csds_ipport", "" },
+                { "tracker_ip", "" },
+                { "dir_ismaster", "true" },
+                { "peer_password", "" },
+                { "dir_peers", "" },
+                { "content_peers", "" },
+
+                // (CM) Connection Manager Server Configurations
+                { "overwrite_machineids", "true" },
+                { "cmboxid", "1" },
+
+                // Developer Related Configurations
+                { "reset_clears_client", "false" },
+                { "disable_storage_neutering", "false" },
+                { "storage_neutor", "true" },
+                { "uat", "0" },
+
+                // Admin Server Related Configurations
+                { "admin_inactive_timout", "600" },
+
+                // Security Related
+                { "use_random_keys", "true" },
+
+                // Script reload paths
+                { "DirectoryServer_script_path", "servers/directoryserver.py" },
+                { "FTPUpdateServer_script_path", "steamweb/ftp.py" },
+                { "CMUDP27014_script_path", "steam3/cmserver_udp.py" },
+                { "CMUDP27017_script_path", "steam3/cmserver_udp.py" },
+                { "CMTCP27014_script_path", "steam3/cmserver_tcp.py" },
+                { "CMTCP27017_script_path", "steam3/cmserver_tcp.py" },
+                { "ContentListServer_script_path", "servers/contentlistserver.py" },
+                { "AuthServer_script_path", "servers/authserver.py" },
+                { "Beta1Server_script_path", "servers/beta_authserver.py" },
+                { "ClientUpdateServer_script_path", "servers/clientupdateserver.py" },
+                { "ConfigServer_script_path", "servers/configserver.py" },
+                { "ContentServer_script_path", "servers/contentserver.py" },
+                { "CSERServer_script_path", "servers/cserserver.py" },
+                { "HarvestServer_script_path", "servers/harvestserver.py" },
+                { "MasterServer_script_path", "servers/masterserver.py" },
+                { "TrackerServer_script_path", "servers/trackerserver_beta.py" },
+                { "ValidationServer_script_path", "servers/validationserver.py" },
+                { "VAC1Server_script_path", "servers/valve_anticheat1.py" },
+                { "VTTServer_script_path", "servers/vttserver.py" },
+                { "CafeServer_script_path", "servers/vttserver.py" },
+            };
+        }
+    }
+}
