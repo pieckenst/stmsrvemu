@@ -160,6 +160,17 @@ namespace StmServerEmulator.Utilities
         }
 
         /// <summary>
+        /// Calculate SHA256 hash of byte array
+        /// </summary>
+        public static byte[] CalculateSha256(byte[] input)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                return sha256.ComputeHash(input);
+            }
+        }
+
+        /// <summary>
         /// Base64 encode a string
         /// </summary>
         public static string Base64Encode(string input)

@@ -72,6 +72,7 @@
     <Compile Include="Steam3\CMServerUDP.cs" />
     <Compile Include="Database\DatabaseManager.cs" />
     <Compile Include="Database\MariaDBConnection.cs" />
+    <Compile Include="Database\AuthDatabase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
